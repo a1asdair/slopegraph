@@ -47,23 +47,29 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	capture confirm numeric variable `event'
     if _rc {
 		// For string variables, encode them
+		di "string event"
 		encode `event', gen(lhs)
+		gen lhslabel = `event'
     }
 	else {
 		// For pre-coded variables, make sure to grab the labels
+		di "coded event"
 		gen lhs=`event'
 		label values lhs `: value label `event''
+		decode `event', gen(lhslabel)
 	}
 
 	capture confirm numeric variable `response'
     if _rc {
 		// For string variables, encode them
 		encode `response', gen(rhs)
+		gen rhslabel = `response'
     }
 	else {
 		// For pre-coded variables, make sure to grab the labels
 		gen rhs = `response'
 		label values rhs `: value label `response''
+		decode `response', gen(rhslabel)		
 	}
 	
 	if "`number'" != "" {
@@ -78,7 +84,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 			// Collapse to that count
 
 			gen links=1
-			collapse (count) links, by(lhs rhs `event' `response')
+			collapse (count) links, by(lhs rhs lhslabel rhslabel) //`event' `response')
 		}		
 		else {
 
@@ -101,8 +107,8 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 // Think about Event order
 
 	// Ranks the Events by the total number of links from them
-	bysort `event': egen totallinks = sum(links)
-	egen lhsrank = group(totallinks `event')
+	bysort lhslabel: egen totallinks = sum(links)
+	egen lhsrank = group(totallinks lhslabel)
 	
 	// We now have to reverse this order to get it right
 	quietly sum lhsrank
@@ -183,8 +189,8 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 
 	// We only need to plot the Event and Response labels once; numbering the occurences
 	// lets us plot just the first occurence for each Event and Response
-	bysort `event': egen plotlhs = seq()		
-	bysort `response': egen plotrhs = seq()	
+	bysort lhslabel: egen plotlhs = seq()		
+	bysort rhslabel: egen plotrhs = seq()	
 	
 	
 // Think about Colour
