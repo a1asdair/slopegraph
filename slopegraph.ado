@@ -95,6 +95,10 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 				di "You must specify the variable containing the number of links if your dataset is already collapsed"
 				exit
 			}
+			
+			if "`label'" != "" {
+				di "The label option will not work for pre-collapsed data"
+			}
 
 			// This is the user-supplied variable that contains the number of links
 			rename `links' links
@@ -144,24 +148,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	}
 
 	
-// Think about scaling	
-	
-	// Scale the Events on the y-axis
 
-	gen ylhs = (lhsrank / `rmax') * `yscale'
-	
-	// Scale the Responses on the y-axis
-	quietly sum rhs
-	local rhsmax = r(max)
-	gen yrhs = (rhsrank/(`rhsmax' + 1)) * `yscale'
-
-	// Scale the distance between Events and Responses on the x-axis
-	gen xlhs = 1
-	gen xrhs = `xscale'
-	
-	// Add extra room to the x-axis so that the Event and Response labels will fit
-	local xrax = `xscale'*1.3
-	local xlax = -`xscale'*0.3
 
 
 // Think about line thickness
@@ -186,6 +173,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		di "Labelling ..."
 	}	
 
+	// Calculate counts and percentages for loops (only possible if 
 	if "`label'"!="" & "`collapsed'" == "" {
 		gen percentlhs = round((countlhs/N)*100,0.1)
 		replace lhslabel = lhslabel + " (n=" + string(countlhs) + "; " + string(percentlhs) + "%)"
@@ -193,7 +181,18 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		replace rhslabel = rhslabel + " (n=" + string(countrhs) + "; " + string(percentrhs) + "%)"
 	}
 	
+	gen lhslablength = strlen(lhslabel)
+	sum lhslablength
+	local lhsmaxlablen = r(max)
 	
+	gen rhslablength = strlen(rhslabel)
+	sum rhslablength
+	local rhsmaxlablen = r(max)
+	
+	// egen lhsmaxlablen = max(lhslablength)
+	// egen rhsmaxlablen = max(rhslablength)	
+
+
 	// This sort ensures that the first occurence below is the largest one
 	// This is important so that the largest line doesn't overlap with the labels
 	gsort - links
@@ -202,6 +201,26 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	// lets us plot just the first occurence for each Event and Response
 	bysort lhslabel: egen plotlhs = seq()		
 	bysort rhslabel: egen plotrhs = seq()	
+
+	
+// Think about scaling	
+	
+	// Scale the Events on the y-axis
+
+	gen ylhs = (lhsrank / `rmax') * `yscale'
+	
+	// Scale the Responses on the y-axis
+	quietly sum rhs
+	local rhsmax = r(max)
+	gen yrhs = (rhsrank/(`rhsmax' + 1)) * `yscale'
+
+	// Scale the distance between Events and Responses on the x-axis
+	gen xlhs = 1
+	gen xrhs = `xscale'
+	
+	// Add extra room to the x-axis so that the Event and Response labels will fit
+	local xrax = `xscale' * (1 + (`lhsmaxlablen'/50))
+	local xlax = -`xscale' * 0.5 * (1 + (`rhsmaxlablen'/50))
 	
 	
 // Think about Colour
