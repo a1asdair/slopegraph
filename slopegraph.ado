@@ -11,7 +11,7 @@ capture prog drop slopegraph
 program slopegraph,
 
 version 11
-syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(integer 10) mthick(integer 5) collapsed equal number color(string) links(string) saving(string) eorder(string) rorder(string) debug] 
+syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(integer 10) mthick(integer 5) collapsed equal number color(string) links(string) saving(string) eorder(string) rorder(string) label debug] 
 
 
 // Events (LHS)
@@ -47,13 +47,11 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	capture confirm numeric variable `event'
     if _rc {
 		// For string variables, encode them
-		di "string event"
 		encode `event', gen(lhs)
 		gen lhslabel = `event'
     }
 	else {
 		// For pre-coded variables, make sure to grab the labels
-		di "coded event"
 		gen lhs=`event'
 		label values lhs `: value label `event''
 		decode `event', gen(lhslabel)
@@ -80,11 +78,16 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	
 		if "`collapsed'" == "" {	
 
+			gen N = _N
+			
+			bysort lhs: egen countlhs = count(lhs)
+			bysort rhs: egen countrhs = count(rhs)
+		
 			// For each event/response pair, count
 			// Collapse to that count
 
 			gen links=1
-			collapse (count) links, by(lhs rhs lhslabel rhslabel) //`event' `response')
+			collapse (count) links, by(lhs rhs lhslabel rhslabel N countlhs countrhs) //`event' `response')
 		}		
 		else {
 
@@ -183,6 +186,14 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		di "Labelling ..."
 	}	
 
+	if "`label'"!="" & "`collapsed'" == "" {
+		gen percentlhs = round((countlhs/N)*100,0.1)
+		replace lhslabel = lhslabel + " (n=" + string(countlhs) + "; " + string(percentlhs) + "%)"
+		gen percentrhs = round((countrhs/N)*100,0.1)
+		replace rhslabel = rhslabel + " (n=" + string(countrhs) + "; " + string(percentrhs) + "%)"
+	}
+	
+	
 	// This sort ensures that the first occurence below is the largest one
 	// This is important so that the largest line doesn't overlap with the labels
 	gsort - links
@@ -265,8 +276,8 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		
 		
 // Finally, draw the graph		
-	twoway  (scatter ylhs xlhs if plotlhs==1, mlabel(lhs) mlabcolor(gs1) mlabposition(9) mlabsize(vsmall) msize(`mthick') mcolor(white)) ///
-			(scatter yrhs xrhs if plotrhs==1, mlabel(rhs) mlabcolor(gs1) mlabsize(vsmall) mcolor(white)  msize(`mthick') ) ///
+	twoway  (scatter ylhs xlhs if plotlhs==1, mlabel(lhslabel) mlabcolor(gs1) mlabposition(9) mlabsize(vsmall) msize(`mthick') mcolor(white)) ///
+			(scatter yrhs xrhs if plotrhs==1, mlabel(rhslabel) mlabcolor(gs1) mlabsize(vsmall) mcolor(white)  msize(`mthick') ) ///
 			`slopes' , ///
 			legend(off) graphregion(color(white)) xla(none) xsc(noline r(`xlax' `xrax')) xtitle("") ysc(r(0 .) reverse off) yla(, nogrid) ///
 			`save'
