@@ -46,18 +46,24 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 
 	capture confirm numeric variable `event'
     if _rc {
+		// For string variables, encode them
 		encode `event', gen(lhs)
     }
 	else {
+		// For pre-coded variables, make sure to grab the labels
 		gen lhs=`event'
+		label values lhs `: value label `event''
 	}
 
 	capture confirm numeric variable `response'
     if _rc {
+		// For string variables, encode them
 		encode `response', gen(rhs)
     }
 	else {
+		// For pre-coded variables, make sure to grab the labels
 		gen rhs = `response'
+		label values rhs `: value label `response''
 	}
 	
 	if "`number'" != "" {
@@ -145,7 +151,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	gen xrhs = `xscale'
 	
 	// Add extra room to the x-axis so that the Event and Response labels will fit
-	local xrax = `xscale'*1.1
+	local xrax = `xscale'*1.3
 	local xlax = -`xscale'*0.3
 
 
