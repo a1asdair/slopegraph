@@ -33,6 +33,7 @@
 {syntab:Optional}
 {synopt:{opt yscale(integer)}}The maximum range of the y-axis; stretches the graph vertically{p_end}
 {synopt:{opt xscale(integer)}}The maximum range of the x-axis; stretches the graph horizontally{p_end}
+{synopt:{opt label}}Adds labels with the the number of links and percentage of links to each Event and Response{p_end}
 {synopt:{opt mthick(integer)}}The maximum line thickness for the graph lines{p_end}
 {synopt:{opt collapsed}}Signals that the dataset has already been collapsed{p_end}
 {synopt:{opt equal}}Forces the connecting lines to be equal thickness{p_end}
@@ -51,136 +52,48 @@
 {title:Description}
 
 {pstd}
-{cmd:progressbar} displays a progress bar for use in loops or repeated tasks.  It is able to track the progress of nested loops incorporating both foreach and forvalues loops.  It can also be used outside of loops where the number of tasks is known.
+{cmd:slopegraph} produces a "slope graph" popularised by Edward Tufte. As default it requires "long" data where each case is an "Event" (appearing on the left-hand-side) and "Response" (appearing on the righ-hand-side) pair.  It will then calculate the number of links for each Event-Response pair.  It is also possible to supply "wide" data, where each case is a unique Event-Response pair, with the number of links specified in a third variable.
 
 {pstd}
-{cmd:progressbar} should be called once before the repeated tasks begin to set up the tracking using the init option.  It can then be called each time the progress bar needs to be updated and displayed.  Options allow the display of the progress bar to be customised, and it can also estimate the time to completion.
-
+A range of options allow the user to customise the appearance of the slope graph produced.
 
 {marker options}{...}
 {title:Options}
 
-{dlgtab:Initialisation}
+{dlgtab:Required}
 
 {phang}
-{opt init} This option must be specified when the command is called before the loops begin. It allows the calculating of the number of iterations expected in the loops.
+{opt event(varname)} This specifies the variable containing the values for the left-hand-side.  It should either contain strings, or be integers representing sequentially-numbered categories with value labels applied.
 
 {phang}
-{opt type()} This indicates the number and type of nested loops.  There are two types of loop supported:
-v	forvalues
-e 	foreach
-Specify in order the types of nested loop e.g. "e v v"
-Any number of forvalues loops are supported; up to 10 nested foreach loops are supported
+{opt response(varname)} This specifies the variable containing the values for the right-hand-side.  It should either contain strings, or be integers representing sequentially-numbered categories with value labels applied.
+
+
+{dlgtab:Optional}
 
 {phang}
-{opt start()} List the starting values for each of the forvalues loops
-e.g. 1 1 3
+{opt yscale()} Specifies the maximum range of the y-axis, and can be used to stretch the graph vertically.
 
 {phang}
-{opt end()} list the ending value for each of the forvalues loops
-e.g. 10 100 6
+{opt xscale()} Specifies the maximum range of the x-axis, and can be used to stretch the graph horizontally.
 
 {phang}
-{opt step()} Specify the step values for each of the forvalue loops
-If they are all 1, then this option can be omitted, otheriwse it must be specified
-e.g. 2 1 1
+{opt label()} Appends the total number of links and percentage of links to each value label for both Events and Responses.  It can only be used if the data is supplied in "long" format (i.e. without using the collapsed option)
 
 {phang}
-{opt list#()} Include the list for each of the foreach loops in turn, where # should be 1 for the first list, 2 for the second list, etc.  progressbar supports up to 10 nested foreach loops.
-
-{phang}
-{opt time()}
-This option needs to be specified in both the initiation and looping commands.  Here it records the start time of the looped tasks.
-
-
-{phang}
-{opt width()}
-Allows the user to specify the width of the bar displayed in characters.  The progress bar will be scaled when displayed to fit within the character limit.  This is useful when the width of the dispaly is limited, or when the progress bar needs to fit with other output being displayed. The default is 80 characters.
-
-{phang}
-{opt loud} This option prevents the -progressbar- from clearing the screen, allowing the output to be preserved.
-
-{phang}
-{opt display} This option displays the progress bar without incrementing the counter.
-
-{phang}
-{opt time} This option needs to be specified in both the initiation and looping commands for it to work. It estimates the remaining time for the loop, assuming constant runtimes.
-
+Additional options still to be documented ...
 
 {marker remarks}{...}
 {title:Remarks}
 
 {pstd}
-While {cmd:progressbar} will add slightly to runtime, it is helpful to be able to estimate when an intensive loop will finish.
 
 
 {marker examples}{...}
 {title:Examples}
 
 {pstd}
-Before each loop (or set of nested loops), {cmd:. progressbar} must be called  with the option init, along with the specifications of the loops to be carried out. 
 
-{pstd}
-Initialise a simple loop from 1 to 10
-
-{phang}{cmd:. progressbar , init type(v) start(1) end(10) step(1)}{p_end}
-
-{pstd}
-Initialise a simple loop from 1 to 10 including a timer
-
-{phang}{cmd:. progressbar , init type(v) start(1) end(10) time}{p_end}
-
-{pstd}
-Initialise a complicated loop involving two forvalues and two foreach loops of different sizes
-
-{phang}{cmd:. progressbar , init type(v e v e) start(1 5) end(10 25) step(1 5) list1(abc def ghi) list2(a b c d)}{p_end}
-
-{p 4 6 2}
-
-{pstd}
-During a loop (or set of nested loops), {cmd:. progressbar} should be called each time the progress bar should be displayed.  {cmd:. progressbar} should be called once at the nested loops deepest point (i.e. inside all the loops).
-
-{pstd}
-Display a progress bar during a loop
-
-{phang}{cmd:. progressbar , }{p_end}
-
-{pstd}
-Display a progress bar during a loop with a timer
-
-{phang}{cmd:. progressbar , time }{p_end}
-
-{pstd}
-Display a progress bar that is 100 characters wide
-
-{phang}{cmd:. progressbar , width(100)}{p_end}
-
-{p 4 6 2}
-
-{pstd}
-A full example of using progressbar with a forvalues loop.
-
-{phang}{cmd:. progressbar , init type(v) start(1) end(100) time}{p_end}
-
-{phang}{cmd:. forvalues i = 1(1)100 {c -(}}{p_end}
-{phang}{cmd:. 	progressbar , time}{p_end}
-{phang}{cmd:. 	generate x`i' = runiform()}{p_end}
-{phang}{cmd:. {c )-}}{p_end}
-
-
-{pstd}
-A full example of using progressbar with nested loops.
-
-{phang}{cmd:. local alist = "alpha beta gamma"}{p_end}
-
-{phang}{cmd:. progressbar , init type(v e) start(1) end(100) list1(`alist') time}{p_end}
-
-{phang}{cmd:. forvalues i = 1(1)100 {c -(}}{p_end}
-{phang}{cmd:. 		foreach jj in `alist' {c -(}}{p_end}
-{phang}{cmd:. 			progressbar , time}{p_end}
-{phang}{cmd:. 			generate x`i'`jj' = runiform()}{p_end}
-{phang}{cmd:. 		{c )-}}{p_end}
-{phang}{cmd:. {c )-}}{p_end}
 
 
 
