@@ -79,10 +79,6 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 			decode `response', gen(rhslabel)		
 		}
 		
-		if "`number'" != "" {
-			numlabel lhs rhs, add
-		}
-		
 	}
 	else {
 	
@@ -102,6 +98,13 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 			gen rhs = `response'
 			gen rhslabel = `continous'
 		}
+	}
+	
+	
+	
+	// Add the numbering to the labels to help the user with ordering	
+	if "`number'" != "" {
+			numlabel lhs rhs, add
 	}
 	
 // Collapse the dataset if required	
@@ -200,11 +203,6 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	}
 	
 
-
-	
-
-
-
 // Think about line thickness
 
 	quietly sum links
@@ -238,6 +236,17 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	if "`debug'" == "debug" {
 		di "Labelling ..."
 	}	
+	
+	if "`number'" != "" {
+	
+		// Add numbers to the Event and Response labels to help user with manual ordering
+		if "`debug'" == "debug" {
+			di "Add numbers to the labels ..."
+		}	
+	
+		replace lhslabel = string(lhs) + ". " + lhslabel
+		replace rhslabel = string(rhs) + ". " + rhslabel
+	}
 
 	// Calculate counts and percentages for loops
 	if "`label'" != "" {
