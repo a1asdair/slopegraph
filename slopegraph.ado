@@ -92,7 +92,8 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	
 		confirm string variable `continous'
 		if _rc {
-			di "If your Event and Response variables are continous, then you must specify a string variable with labels as continous(varname)"
+			di in red "If your Event and Response variables are continous, then you must specify a string variable with labels as continous(varname)"
+			exit
 		}
 		else {
 			gen lhs = `event'
@@ -104,6 +105,11 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	}
 	
 // Collapse the dataset if required	
+
+		if "`debug'" == "debug" {
+			di "Collapse if necessary"
+		}
+
 	
 		if "`collapsed'" == "" {	
 
@@ -121,17 +127,15 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		else {
 
 			if "`links'" == "" {
-				di "You must specify the variable containing the number of links if your dataset is already collapsed"
+				di in red "You must specify the variable containing the number of links if your dataset is already collapsed"
 				exit
 			}
 			
-			if "`label'" != "" {
-				di "The label option will not work for pre-collapsed data"
-			}
-
 			// This is the user-supplied variable that contains the number of links
 			rename `links' links
-			
+			egen N = sum(links)
+			bysort lhs: egen countlhs = sum(links)
+			bysort rhs: egen countrhs = sum(links)		
 		}
 
 
@@ -173,7 +177,6 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 			replace rhsrank = `pp' if rhs==`item'
 			local pp = `pp' + 1
 		}
-	tab rhsrank	
 	}
 
 	
@@ -197,7 +200,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		if `mthick'==1 {
 			quietly sum links
 			local maxlinks = r(max)
-			while `maxlinks' > 20 {
+			while `maxlinks' > 10 {
 				local maxlinks = round(`maxlinks'/2,1)
 			}
 			local mthick = `maxlinks'
@@ -214,8 +217,8 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		di "Labelling ..."
 	}	
 
-	// Calculate counts and percentages for loops (only possible if 
-	if "`label'"!="" & "`collapsed'" == "" {
+	// Calculate counts and percentages for loops (only possible if data are lond)
+	if "`label'" != "" {
 		gen percentlhs = round((countlhs/N)*100,0.1)
 		replace lhslabel = lhslabel + " (n=" + string(countlhs) + "; " + string(percentlhs) + "%)"
 		gen percentrhs = round((countrhs/N)*100,0.1)
@@ -328,18 +331,20 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 
 // Sort out any last-minute graph options
 
-	if "`saving'"!="" {
+	if "`saving'" != "" {
 		local save = "saving(`saving')"
 	}
 	
 	
 	// Reverse the y-axis if using categorical data
 	if "`continous'" == "" {
-		local reverse = `reverse'
+		local reverse = "reverse"
 	}
 		
-		
-		
+	
+	if "`debug'" == "debug" {		
+		di "Draw the graph"
+	}	
 		
 // Finally, draw the graph		
 	twoway  (scatter ylhs xlhs if plotlhs==1, mlabel(lhslabel) mlabcolor(gs1) mlabposition(9) mlabsize(vsmall) msize(`mthick') mcolor(white)) ///
