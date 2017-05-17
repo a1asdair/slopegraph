@@ -144,40 +144,62 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	}		
 		
 		
-// Think about Event order
 
-	// Ranks the Events by the total number of links from them
-	bysort lhslabel: egen totallinks = sum(links)
-	egen lhsrank = group(totallinks lhslabel)
+
+	if "`continous'"=="" {	
 	
-	// We now have to reverse this order to get it right
-	quietly sum lhsrank
-	local rmax = r(max)
+		// Rank categorical data
+		
+			// Think about Event order
+
+			// Ranks the Events by the total number of links from them
+			bysort lhslabel: egen totallinks = sum(links)
+			egen lhsrank = group(totallinks lhslabel)
+			
+			// We now have to reverse this order to get it right
+			quietly sum lhsrank
+			local rmax = r(max)
+			
+			replace lhsrank = `rmax' + 1 - lhsrank
+			
+			if "`eorder'" != "" {
+				local pp = 1
+				foreach item in `eorder' {
+					di "`item' will become `pp'"
+					replace lhsrank = `pp' if lhs==`item'
+					local pp = `pp' + 1
+				}
+			tab lhsrank	
+			}
+			
+			// Think about Response order
+
+			gen rhsrank = rhs
+			
+			if "`rorder'" != "" {
+				local pp = 1
+				foreach item in `rorder' {
+					di "`item' will become `pp'"
+					replace rhsrank = `pp' if rhs==`item'
+					local pp = `pp' + 1
+				}
+			}			
+	}
+	else {
 	
-	replace lhsrank = `rmax' + 1 - lhsrank
+		// Rank continous data
+		// Just leave it in the order of its magnitude
+		
+		gen lhsrank = lhs
+		gen rhsrank = rhs
+		
+		// The max LHS value is needed later for scaling
+		quietly sum lhsrank
+		local rmax = r(max)
 	
-	if "`eorder'" != "" {
-		local pp = 1
-		foreach item in `eorder' {
-			di "`item' will become `pp'"
-			replace lhsrank = `pp' if lhs==`item'
-			local pp = `pp' + 1
-		}
-	tab lhsrank	
 	}
 	
-// Think about Response order
 
-	gen rhsrank = rhs
-	
-	if "`rorder'" != "" {
-		local pp = 1
-		foreach item in `rorder' {
-			di "`item' will become `pp'"
-			replace rhsrank = `pp' if rhs==`item'
-			local pp = `pp' + 1
-		}
-	}
 
 	
 
@@ -217,20 +239,29 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		di "Labelling ..."
 	}	
 
-	// Calculate counts and percentages for loops (only possible if data are lond)
+	// Calculate counts and percentages for loops
 	if "`label'" != "" {
-		gen percentlhs = round((countlhs/N)*100,0.1)
-		replace lhslabel = lhslabel + " (n=" + string(countlhs) + "; " + string(percentlhs) + "%)"
-		gen percentrhs = round((countrhs/N)*100,0.1)
-		replace rhslabel = rhslabel + " (n=" + string(countrhs) + "; " + string(percentrhs) + "%)"
+	
+		// Label differently depending on whether the data is categorical or continous
+	
+		if "`continous'" == "" {
+			gen percentlhs = round((countlhs/N)*100,0.1)
+			replace lhslabel = lhslabel + " (n=" + string(countlhs) + "; " + string(percentlhs) + "%)"
+			gen percentrhs = round((countrhs/N)*100,0.1)
+			replace rhslabel = rhslabel + " (n=" + string(countrhs) + "; " + string(percentrhs) + "%)"
+		}
+		else {
+			replace lhslabel = lhslabel + " (n=" + string(lhs) + ")"
+			replace rhslabel = rhslabel + " (n=" + string(rhs) + ")"
+		}
 	}
 	
 	gen lhslablength = strlen(lhslabel)
-	sum lhslablength
+	quietly sum lhslablength
 	local lhsmaxlablen = r(max)
 	
 	gen rhslablength = strlen(rhslabel)
-	sum rhslablength
+	quietly sum rhslablength
 	local rhsmaxlablen = r(max)
 	
 	// egen lhsmaxlablen = max(lhslablength)
@@ -248,15 +279,22 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 
 	
 // Think about scaling	
-	
-	// Scale the Events on the y-axis
 
-	gen ylhs = (lhsrank / `rmax') * `yscale'
+	if "`continous'"=="" {	
 	
-	// Scale the Responses on the y-axis
-	quietly sum rhs
-	local rhsmax = r(max)
-	gen yrhs = (rhsrank/(`rhsmax' + 1)) * `yscale'
+		// Scale the Events on the y-axis
+
+		gen ylhs = (lhsrank / `rmax') * `yscale'
+		
+		// Scale the Responses on the y-axis
+		quietly sum rhs
+		local rhsmax = r(max)
+		gen yrhs = (rhsrank/(`rhsmax' + 1)) * `yscale'
+	}
+	else {
+		gen ylhs = lhsrank
+		gen yrhs = rhsrank	
+	}
 
 	// Scale the distance between Events and Responses on the x-axis
 	gen xlhs = 1
@@ -350,7 +388,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	twoway  (scatter ylhs xlhs if plotlhs==1, mlabel(lhslabel) mlabcolor(gs1) mlabposition(9) mlabsize(vsmall) msize(`mthick') mcolor(white)) ///
 			(scatter yrhs xrhs if plotrhs==1, mlabel(rhslabel) mlabcolor(gs1) mlabsize(vsmall) mcolor(white)  msize(`mthick') ) ///
 			`slopes' , ///
-			legend(off) graphregion(color(white)) xla(none) xsc(noline r(`xlax' `xrax')) xtitle("") ysc(r(0 .) `reverse' off) yla(, nogrid) ///
+			legend(off) graphregion(color(white)) xla(none) xsc(noline r(`xlax' `xrax')) xtitle("") ysc(r(0 `yscale') `reverse' off) yla(, nogrid) ///
 			`save'
 
 
