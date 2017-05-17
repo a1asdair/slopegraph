@@ -11,7 +11,7 @@ capture prog drop slopegraph
 program slopegraph,
 
 version 11
-syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(integer 10) mthick(integer 5) collapsed equal number color(string) links(string) saving(string) eorder(string) rorder(string) label debug] 
+syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(integer 10) mthick(integer 1) collapsed equal number color(string) links(string) saving(string) eorder(string) rorder(string) label debug] 
 
 
 // Events (LHS)
@@ -162,6 +162,18 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		gen thick = `mthick'
 	}
 	else {
+
+		// Set a maximum that is a multiple of the size of the largest line, and is below 20
+		// unless mthick() has been specified by the user
+		if `mthick'==1 {
+			quietly sum links
+			local maxlinks = r(max)
+			while `maxlinks' > 20 {
+				local maxlinks = round(`maxlinks'/2,1)
+			}
+			local mthick = `maxlinks'
+		}
+	
 		// Scale the thickness between 1 and the maximum
 		gen linkspercent = (links - `lmin') / (`lmax' - `lmin')
 		gen thick = round(linkspercent * `mthick')
