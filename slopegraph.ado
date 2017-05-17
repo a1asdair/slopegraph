@@ -163,16 +163,15 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 			quietly sum lhsrank
 			local rmax = r(max)
 			
-			replace lhsrank = `rmax' + 1 - lhsrank
+			quietly replace lhsrank = `rmax' + 1 - lhsrank
 			
 			if "`eorder'" != "" {
 				local pp = 1
 				foreach item in `eorder' {
 					di "`item' will become `pp'"
-					replace lhsrank = `pp' if lhs==`item'
+					quietly replace lhsrank = `pp' if lhs==`item'
 					local pp = `pp' + 1
 				}
-			tab lhsrank	
 			}
 			
 			// Think about Response order
@@ -183,7 +182,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 				local pp = 1
 				foreach item in `rorder' {
 					di "`item' will become `pp'"
-					replace rhsrank = `pp' if rhs==`item'
+					quietly replace rhsrank = `pp' if rhs==`item'
 					local pp = `pp' + 1
 				}
 			}			
@@ -244,8 +243,8 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 			di "Add numbers to the labels ..."
 		}	
 	
-		replace lhslabel = string(lhs) + ". " + lhslabel
-		replace rhslabel = string(rhs) + ". " + rhslabel
+		quietly replace lhslabel = string(lhs) + ". " + lhslabel
+		quietly replace rhslabel = string(rhs) + ". " + rhslabel
 	}
 
 	// Calculate counts and percentages for loops
@@ -255,13 +254,13 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	
 		if "`continous'" == "" {
 			gen percentlhs = round((countlhs/N)*100,0.1)
-			replace lhslabel = lhslabel + " (n=" + string(countlhs) + "; " + string(percentlhs) + "%)"
+			quietly replace lhslabel = lhslabel + " (n=" + string(countlhs) + "; " + string(percentlhs) + "%)"
 			gen percentrhs = round((countrhs/N)*100,0.1)
-			replace rhslabel = rhslabel + " (n=" + string(countrhs) + "; " + string(percentrhs) + "%)"
+			quietly replace rhslabel = rhslabel + " (n=" + string(countrhs) + "; " + string(percentrhs) + "%)"
 		}
 		else {
-			replace lhslabel = lhslabel + " (n=" + string(lhs) + ")"
-			replace rhslabel = rhslabel + " (n=" + string(rhs) + ")"
+			quietly replace lhslabel = lhslabel + " (n=" + string(lhs) + ")"
+			quietly replace rhslabel = rhslabel + " (n=" + string(rhs) + ")"
 		}
 	}
 	
@@ -329,21 +328,21 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 
 	// Color by Event
 	if substr("`color'",1,1)=="e" {
-		replace color = round((lhsrank / `rmax') * 14) + 1
+		quietly replace color = round((lhsrank / `rmax') * 14) + 1
 	}
 	
 	// Color by Response	
 	if substr("`color'",1,1)=="r" {
-		replace color = round((rhs / `rhsmax') * 14) + 1
+		quietly replace color = round((rhs / `rhsmax') * 14) + 1
 	}
 
 	// Color by line thickness	
 	if substr("`color'",1,1)=="l" {
-		replace color = round((links / `lmax') * 14) + 1
+		quietly replace color = round( (links / `lmax') * 14) + 1
 	}
 	
 	// Default color if none specified
-	replace color = 6 if color==.
+	quietly replace color = 6 if color==.
 
 	
 	if "`debug'" == "debug" {
