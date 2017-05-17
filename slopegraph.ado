@@ -11,7 +11,7 @@ capture prog drop slopegraph
 program slopegraph,
 
 version 11
-syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(integer 10) mthick(integer 1) collapsed equal number color(string) links(string) saving(string) eorder(string) rorder(string) label debug] 
+syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(integer 10) mthick(integer 1) collapsed equal number color(string) links(string) saving(string) eorder(string) rorder(string) continous(string) label debug] 
 
 
 // Events (LHS)
@@ -40,38 +40,67 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		di "Data ready"
 	}
 
-	
-	
-// Number the events
 
-	capture confirm numeric variable `event'
-    if _rc {
-		// For string variables, encode them
-		encode `event', gen(lhs)
-		gen lhslabel = `event'
-    }
-	else {
-		// For pre-coded variables, make sure to grab the labels
-		gen lhs=`event'
-		label values lhs `: value label `event''
-		decode `event', gen(lhslabel)
-	}
-
-	capture confirm numeric variable `response'
-    if _rc {
-		// For string variables, encode them
-		encode `response', gen(rhs)
-		gen rhslabel = `response'
-    }
-	else {
-		// For pre-coded variables, make sure to grab the labels
-		gen rhs = `response'
-		label values rhs `: value label `response''
-		decode `response', gen(rhslabel)		
-	}
 	
-	if "`number'" != "" {
-		numlabel lhs rhs, add
+// Check whether the slopegraph data is categorial (default) or continous	
+
+
+	if "`continous'"=="" {	
+	
+		if "`debug'" == "debug" {
+			di "The data are categorical"
+		}
+	
+		// Number the events
+
+		capture confirm numeric variable `event'
+		if _rc {
+			// For string variables, encode them
+			encode `event', gen(lhs)
+			gen lhslabel = `event'
+		}
+		else {
+			// For pre-coded variables, make sure to grab the labels
+			gen lhs=`event'
+			label values lhs `: value label `event''
+			decode `event', gen(lhslabel)
+		}
+
+		capture confirm numeric variable `response'
+		if _rc {
+			// For string variables, encode them
+			encode `response', gen(rhs)
+			gen rhslabel = `response'
+		}
+		else {
+			// For pre-coded variables, make sure to grab the labels
+			gen rhs = `response'
+			label values rhs `: value label `response''
+			decode `response', gen(rhslabel)		
+		}
+		
+		if "`number'" != "" {
+			numlabel lhs rhs, add
+		}
+		
+	}
+	else {
+	
+		if "`debug'" == "debug" {
+			di "The data are continous"
+		}
+	
+		confirm string variable `continous'
+		if _rc {
+			di "If your Event and Response variables are continous, then you must specify a string variable with labels as continous(varname)"
+		}
+		else {
+			gen lhs = `event'
+			gen lhslabel = `continous'
+			
+			gen rhs = `response'
+			gen rhslabel = `continous'
+		}
 	}
 	
 // Collapse the dataset if required	
@@ -302,6 +331,12 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	if "`saving'"!="" {
 		local save = "saving(`saving')"
 	}
+	
+	
+	// Reverse the y-axis if using categorical data
+	if "`continous'" == "" {
+		local reverse = `reverse'
+	}
 		
 		
 		
@@ -310,7 +345,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	twoway  (scatter ylhs xlhs if plotlhs==1, mlabel(lhslabel) mlabcolor(gs1) mlabposition(9) mlabsize(vsmall) msize(`mthick') mcolor(white)) ///
 			(scatter yrhs xrhs if plotrhs==1, mlabel(rhslabel) mlabcolor(gs1) mlabsize(vsmall) mcolor(white)  msize(`mthick') ) ///
 			`slopes' , ///
-			legend(off) graphregion(color(white)) xla(none) xsc(noline r(`xlax' `xrax')) xtitle("") ysc(r(0 .) reverse off) yla(, nogrid) ///
+			legend(off) graphregion(color(white)) xla(none) xsc(noline r(`xlax' `xrax')) xtitle("") ysc(r(0 .) `reverse' off) yla(, nogrid) ///
 			`save'
 
 
