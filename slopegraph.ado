@@ -324,7 +324,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	// These are scaled across the range based on the user-selection
 	// The default is monotone
 
-	gen color=.
+	quietly gen color=.
 
 	// Color by Event
 	if substr("`color'",1,1)=="e" {
