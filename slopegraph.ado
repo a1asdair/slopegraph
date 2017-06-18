@@ -11,11 +11,11 @@ capture prog drop slopegraph
 program slopegraph,
 
 version 11
-syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(integer 10) mthick(integer 1) collapsed equal number color(string) links(string) saving(string) eorder(string) rorder(string) continous(string) label debug] 
+syntax [using/] , left(string) right(string) [yscale(integer 10) xscale(integer 10) mthick(integer 1) collapsed equal number color(string) links(string) saving(string) eorder(string) rorder(string) continous(string) label debug] 
 
 
-// Events (LHS)
-// Response (RHS)
+// lefts (LHS)
+// right (RHS)
 
 
 // Set up
@@ -51,32 +51,32 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 			di "The data are categorical"
 		}
 	
-		// Number the events
+		// Number the lefts
 
-		capture confirm numeric variable `event'
+		capture confirm numeric variable `left'
 		if _rc {
 			// For string variables, encode them
-			encode `event', gen(lhs)
-			gen lhslabel = `event'
+			encode `left', gen(lhs)
+			gen lhslabel = `left'
 		}
 		else {
 			// For pre-coded variables, make sure to grab the labels
-			gen lhs=`event'
-			label values lhs `: value label `event''
-			decode `event', gen(lhslabel)
+			gen lhs=`left'
+			label values lhs `: value label `left''
+			decode `left', gen(lhslabel)
 		}
 
-		capture confirm numeric variable `response'
+		capture confirm numeric variable `right'
 		if _rc {
 			// For string variables, encode them
-			encode `response', gen(rhs)
-			gen rhslabel = `response'
+			encode `right', gen(rhs)
+			gen rhslabel = `right'
 		}
 		else {
 			// For pre-coded variables, make sure to grab the labels
-			gen rhs = `response'
-			label values rhs `: value label `response''
-			decode `response', gen(rhslabel)		
+			gen rhs = `right'
+			label values rhs `: value label `right''
+			decode `right', gen(rhslabel)		
 		}
 		
 	}
@@ -88,14 +88,14 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	
 		confirm string variable `continous'
 		if _rc {
-			di in red "If your Event and Response variables are continous, then you must specify a string variable with labels as continous(varname)"
+			di in red "If your left and right variables are continous, then you must specify a string variable with labels as continous(varname)"
 			exit
 		}
 		else {
-			gen lhs = `event'
+			gen lhs = `left'
 			gen lhslabel = `continous'
 			
-			gen rhs = `response'
+			gen rhs = `right'
 			gen rhslabel = `continous'
 		}
 	}
@@ -121,11 +121,11 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 			bysort lhs: egen countlhs = count(lhs)
 			bysort rhs: egen countrhs = count(rhs)
 		
-			// For each event/response pair, count
+			// For each left/right pair, count
 			// Collapse to that count
 
 			gen links=1
-			collapse (count) links, by(lhs rhs lhslabel rhslabel N countlhs countrhs) //`event' `response')
+			collapse (count) links, by(lhs rhs lhslabel rhslabel N countlhs countrhs) //`left' `right')
 		}		
 		else {
 
@@ -153,17 +153,17 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	
 		// Rank categorical data
 		
-			// Think about Event order
+			// Think about left order
 
-			// Ranks the Events by the total number of links from them
+			// Ranks the lefts by the total number of links from them
 			bysort lhslabel: egen totallinks = sum(links)
 			egen lhsrank = group(totallinks lhslabel)
 			
 			// We now have to reverse this order to get it right
 			quietly sum lhsrank
-			local rmax = r(max)
+			local lhsmax = r(max)
 			
-			quietly replace lhsrank = `rmax' + 1 - lhsrank
+			quietly replace lhsrank = `lhsmax' + 1 - lhsrank
 			
 			if "`eorder'" != "" {
 				local pp = 1
@@ -174,7 +174,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 				}
 			}
 			
-			// Think about Response order
+			// Think about right order
 
 			gen rhsrank = rhs
 			
@@ -197,7 +197,12 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		
 		// The max LHS value is needed later for scaling
 		quietly sum lhsrank
-		local rmax = r(max)
+		local lhsmax = r(max)
+		local lhsmin = r(min)
+		
+		quietly sum rhsrank
+		local rhsmax = r(max)
+		local rhsmin = r(min)
 	
 	}
 	
@@ -238,7 +243,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	
 	if "`number'" != "" {
 	
-		// Add numbers to the Event and Response labels to help user with manual ordering
+		// Add numbers to the left and right labels to help user with manual ordering
 		if "`debug'" == "debug" {
 			di "Add numbers to the labels ..."
 		}	
@@ -280,8 +285,8 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	// This is important so that the largest line doesn't overlap with the labels
 	gsort - links
 
-	// We only need to plot the Event and Response labels once; numbering the occurences
-	// lets us plot just the first occurence for each Event and Response
+	// We only need to plot the left and right labels once; numbering the occurences
+	// lets us plot just the first occurence for each left and right
 	bysort lhslabel: egen plotlhs = seq()		
 	bysort rhslabel: egen plotrhs = seq()	
 
@@ -290,25 +295,30 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 
 	if "`continous'"=="" {	
 	
-		// Scale the Events on the y-axis
+		// Scale the lefts on the y-axis
 
-		gen ylhs = (lhsrank / `rmax') * `yscale'
+		gen ylhs = (lhsrank / `lhsmax') * `yscale'
 		
-		// Scale the Responses on the y-axis
+		// Scale the rights on the y-axis
 		quietly sum rhs
 		local rhsmax = r(max)
 		gen yrhs = (rhsrank/(`rhsmax' + 1)) * `yscale'
+		
+		local ymin = 0
 	}
 	else {
 		gen ylhs = lhsrank
 		gen yrhs = rhsrank	
+		
+		local ymin = min(`lhsmin', `rhsmin')
+		local yscale = max(`lhsmax', `rhsmax')
 	}
 
-	// Scale the distance between Events and Responses on the x-axis
+	// Scale the distance between lefts and rights on the x-axis
 	gen xlhs = 1
 	gen xrhs = `xscale'
 	
-	// Add extra room to the x-axis so that the Event and Response labels will fit
+	// Add extra room to the x-axis so that the left and right labels will fit
 	local xrax = `xscale' * (1 + (`lhsmaxlablen'/50))
 	local xlax = -`xscale' * 0.5 * (1 + (`rhsmaxlablen'/50))
 	
@@ -323,21 +333,41 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	// Apply a greyscale color to each link
 	// These are scaled across the range based on the user-selection
 	// The default is monotone
+	
+	// ****************************** COLOUR IMPLEMENTATION NEEDS FIXED
 
-	quietly gen color=.
+	quietly gen color=0
+	quietly gen colnum = .  // Used for future implementation of user colours
 
-	// Color by Event
-	if substr("`color'",1,1)=="e" {
-		quietly replace color = round((lhsrank / `rmax') * 14) + 1
+	// Color by left
+	if substr("`color'",1,1)=="l" {
+	
+		// Deafult colors are scaled greys
+		if "`collist'"=="" {
+			quietly replace colnum = round((lhsrank / `lhsmax') * 14) + 1
+			// quietly replace color = round((lhsrank / `lhsmax') * 14) + 1
+			quietly replace color = "gs" + string(colnum)
+		}
+		// apply user-specified color list
+		else {
+			// problem - no rmin is defined anywhere
+			local colcount = `rmin'
+			foreach col in `collist' {
+				quietly replace color = "`col'" if lhsrank==`colcount'
+				local colcount = `colcount' + 1
+			}
+			// Apply the final color to an remaining categories without colors
+			quietly replace color = "`col'" if color==""
+		}
 	}
 	
-	// Color by Response	
+	// Color by right	
 	if substr("`color'",1,1)=="r" {
 		quietly replace color = round((rhs / `rhsmax') * 14) + 1
 	}
 
 	// Color by line thickness	
-	if substr("`color'",1,1)=="l" {
+	if substr("`color'",1,1)=="t" {
 		quietly replace color = round( (links / `lmax') * 14) + 1
 	}
 	
@@ -353,6 +383,8 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 // This loops over each row of the dataset
 	
 	local rows = _N
+	
+	gsort - yrhs - ylhs
 
 	forvalues obs = 1(1)`rows' {
 
@@ -360,7 +392,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 		quietly sum thick if _n==`obs'
 		local thickness =  r(mean)
 		
-		// Extract the color for this case (only one obs)		
+		// Extract the color for this case (only one obs)	    ******** NEED TO FIX FOR STRING COLORS	
 		quietly sum color if _n==`obs'
 		local color =  r(mean)
 		
@@ -396,7 +428,7 @@ syntax [using/] , event(string) response(string) [yscale(integer 10) xscale(inte
 	twoway  (scatter ylhs xlhs if plotlhs==1, mlabel(lhslabel) mlabcolor(gs1) mlabposition(9) mlabsize(vsmall) msize(`mthick') mcolor(white)) ///
 			(scatter yrhs xrhs if plotrhs==1, mlabel(rhslabel) mlabcolor(gs1) mlabsize(vsmall) mcolor(white)  msize(`mthick') ) ///
 			`slopes' , ///
-			legend(off) graphregion(color(white)) xla(none) xsc(noline r(`xlax' `xrax')) xtitle("") ysc(r(0 `yscale') `reverse' off) yla(, nogrid) ///
+			legend(off) graphregion(color(white)) xla(none) xsc(noline r(`xlax' `xrax')) xtitle("") ysc(r(`ymin' `yscale') `reverse' off) yla(, nogrid) ///
 			`save'
 
 
